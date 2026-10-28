@@ -19,8 +19,8 @@
     </div>
 </div>
 
-<div class="row g-4 justify-content-center">
-    <div class="col-12 col-lg-7 col-xl-6">
+<div class="row g-3 g-lg-4 justify-content-center">
+    <div class="col-12 col-lg-7 col-xl-6 partie-plateau">
         <div id="echiquier" class="echiquier"
              data-couleur="{{ partie.couleur }}"
              data-url-jouer="{% url 'jouer' partie.pk %}"
@@ -28,11 +28,11 @@
              data-pieces="{% static 'vendor/chessboardjs-1.0.0/img/chesspieces/wikipedia/' %}"
              data-csrf="{{ csrf_token }}"></div>
     </div>
-    <div class="col-12 col-lg-5 col-xl-4">
+    <div class="col-12 col-lg-5 col-xl-4 partie-infos">
         <div class="card mb-3">
             <div class="card-body">
                 <p class="mb-1 fw-semibold" id="statut" role="status" aria-live="polite"></p>
-                <p class="mb-0 small text-body-secondary">Vous avez les {{ partie.get_couleur_display|lower }}. Promotion automatique en dame.</p>
+                <p class="mb-0 small text-body-secondary">Vous avez les {{ partie.get_couleur_display|lower }}. Promotion automatique en dame. Glissez une pièce, ou touchez-la puis sa case d'arrivée.</p>
                 <button type="button" class="btn btn-sm btn-outline-primary mt-2 d-none" id="relancer">
                     <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Relancer le moteur
                 </button>

@@ -54,6 +54,11 @@ class CreationTests(JoueurMixin, TestCase):
         self.assertContains(reponse, "Lichess Stockfish Level to Elo Breakdown")
         self.assertContains(reponse, "Full strength, single pv, depth 22")
 
+    def test_bouton_menu_pour_la_navigation_mobile(self):
+        reponse = self.client.get(reverse("accueil"))
+        self.assertContains(reponse, 'aria-controls="topbar-nav"')
+        self.assertContains(reponse, "js/navigation.js")
+
     def test_le_formulaire_affiche_se_soumet_tel_quel(self):
         """Ce que la page rend (choix cochés par défaut) suffit à créer une partie."""
         import re
