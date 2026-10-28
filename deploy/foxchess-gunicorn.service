@@ -1,0 +1,39 @@
+[Unit]
+Description=foxChess — gunicorn (127.0.0.1:8012)
+After=network.target foxchess-env-fetch.service postgresql.service
+Requires=foxchess-env-fetch.service
+
+[Service]
+Type=simple
+User=django
+Group=www-data
+UMask=0027
+WorkingDirectory=/var/www/django_websites/foxChess
+EnvironmentFile=/run/foxchess/.env
+# Le SHA déployé (SENTRY_RELEASE), écrit par root au déploiement ; absent avant le premier.
+EnvironmentFile=-/var/lib/fleet-deploy/foxChess.release.env
+Environment="PYTHONUNBUFFERED=1"
+# Chaque coup lance Stockfish (un processus enfant, un fil, 16 Mo de hachage)
+# pour au plus une seconde de réflexion au niveau 8 : 2 workers bornent à deux
+# moteurs simultanés sur la machine partagée. --timeout 30 : large au-dessus du
+# DELAI_MAX de games/moteur.py. Pas de log d'accès : nginx journalise déjà.
+ExecStart=/var/www/django_websites/foxChess/.venv/bin/gunicorn --workers 2 --timeout 30 \
+    --bind 127.0.0.1:8012 \
+    --error-logfile /var/log/foxchess/gunicorn-error.log \
+    config.wsgi:application
+# Durcissement (OPERATIONS.md §3.22). Jamais ProtectSystem=strict : /var/www et
+# /var/log/foxchess doivent rester inscriptibles. Stockfish (/usr/games) n'écrit rien.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+# Un moteur emballé ne peut pas affamer les autres sites.
+CPUQuota=150%
+MemoryMax=768M
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,8 @@
+# /etc/sudoers.d/foxchess-deploy — root:root 0440, vérifié par `visudo -c`.
+# Installé à la main (root, hors déploiement) : OPERATIONS.md §3.7.
+# Le compte django ne peut que redémarrer le service de foxChess et
+# recharger nginx — rien d'autre, sans variable d'environnement.
+Cmnd_Alias FOXCHESS_SVC_CTRL = /bin/systemctl restart foxchess-gunicorn
+Cmnd_Alias FOXCHESS_WEB_CTRL = /usr/sbin/nginx -t, /bin/systemctl reload nginx
+django ALL=(root) NOPASSWD: FOXCHESS_SVC_CTRL, FOXCHESS_WEB_CTRL
+Defaults!FOXCHESS_SVC_CTRL,FOXCHESS_WEB_CTRL !setenv, !env_keep

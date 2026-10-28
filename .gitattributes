@@ -1,0 +1,15 @@
+# Le dépôt stocke du texte en LF ; chaque poste extrait selon sa convention.
+* text=auto
+
+# Ce qui s'exécute ou se lit sur le serveur Linux : toujours LF, même extrait
+# sous Windows (un script shell en CRLF échoue sur « $'\r': command not found »).
+*.sh text eol=lf
+deploy/** text eol=lf
+.github/** text eol=lf
+
+# Binaires : jamais touchés.
+*.png binary
+
+# Bibliothèques copiées (static/vendor) : octets intacts, sinon l'empreinte SRI
+# de la balise <script> ne correspond plus.
+static/vendor/** -text

@@ -1,0 +1,130 @@
+name: Deploy
+
+# Modèle de la flotte (OPERATIONS.md §3.11), repris de Chronos / QuizOnline : après une CI
+# verte sur main, OIDC → rôle IAM foxchess-deploy → SSM sur l'instance.
+# Pas de `workflow_dispatch` (audit du 2026-10-18, M10) : il déployait sans CI
+# verte. Redéployer = relancer la CI de main (« Re-run all jobs »).
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: deploy-foxchess
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Identifiants AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-west-1
+          role-session-name: gh-actions-${{ github.run_id }}
+
+      - name: Déploiement sur l'instance par SSM
+        id: ssm
+        env:
+          INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          # Commandes SSM, exécutées par ROOT, dans l'ordre. SSM les enchaîne en UN
+          # script et ne retient que le code de la dernière : sans `set -eu`, une
+          # étape ratée (ssm-deploy.sh sans .env, donc sans migrate) passait pour
+          # un succès dès que le chown final réussissait. `sh` (dash) : pas de pipefail.
+          #   0. set -eu : la première commande en échec arrête tout → Failed ;
+          #   1. chown de l'arborescence (répare des objets git laissés root) ;
+          #   2. en django, umask 027 : fetch + reset --hard sur origin/main ;
+          #   3. en root : unités systemd, script de configuration et nginx
+          #      installés depuis le BLOB GIT VALIDÉ (miroir de root, au SHA), jamais depuis l'arbre
+          #      modifiable par django (§3.10) ; nginx -t, sinon retour arrière ;
+          #      la minuterie de purge activée (idempotent) ; le SHA déployé écrit dans
+          #      /var/lib/fleet-deploy/foxChess.release.env (root, hors de portée de django),
+          #      lu par les unités (EnvironmentFile=-) : SENTRY_RELEASE (audit M11) ;
+          #   4. en django : ssm-deploy.sh (pip, migrate, collectstatic, restart) ;
+          #   5. normalisation finale des droits : 750 / 640, groupe www-data.
+          #      chown -R -h ne suit aucun lien planté par django ; le chmod tourne
+          #      EN DJANGO (root n'écrit jamais à travers l'arbre de django, §3.10).
+          A=/var/www/django_websites/foxChess
+          # Les blobs installés par root viennent du MIROIR NU DE ROOT
+          # (/var/lib/fleet-deploy, root:root 700), alimenté depuis GitHub (dépôt
+          # public, HTTPS anonyme) au SHA déployé — jamais du .git de l'arbre django (refs, config, hooks réécrivables par
+          # django → escalade vers root).
+          M=/var/lib/fleet-deploy/foxChess.git
+          G="git --git-dir=$M show $SHA"
+          cat > /tmp/ssm-params.json <<EOF
+          {
+            "commands": [
+              "set -eu",
+              "chown -R -h django:www-data $A",
+              "sudo -u django bash -c 'umask 027; cd $A && git fetch --quiet && git reset --hard --quiet origin/main'",
+              "install -d -m 700 -o root -g root /var/lib/fleet-deploy",
+              "[ -d $M ] || git init --quiet --bare $M",
+              "git --git-dir=$M fetch --quiet --depth=1 https://github.com/Foxugly/foxChess.git $SHA",
+              "git --git-dir=$M cat-file -e $SHA^{commit}",
+              "$G:deploy/foxchess-env-fetch.service > /etc/systemd/system/foxchess-env-fetch.service",
+              "$G:deploy/foxchess-gunicorn.service > /etc/systemd/system/foxchess-gunicorn.service",
+              "$G:deploy/foxchess-purge.service > /etc/systemd/system/foxchess-purge.service",
+              "$G:deploy/foxchess-purge.timer > /etc/systemd/system/foxchess-purge.timer",
+              "$G:deploy/fetch-env-from-ssm.sh > /usr/local/sbin/foxchess-env-fetch.sh && chmod 0755 /usr/local/sbin/foxchess-env-fetch.sh && chown root:root /usr/local/sbin/foxchess-env-fetch.sh",
+              "systemctl daemon-reload",
+              "systemctl enable --now foxchess-purge.timer",
+              "echo SENTRY_RELEASE=$SHA > /var/lib/fleet-deploy/foxChess.release.env.tmp && mv /var/lib/fleet-deploy/foxChess.release.env.tmp /var/lib/fleet-deploy/foxChess.release.env",
+              "bash -c 'set -e; $G:deploy/nginx/foxchess.foxugly.com.conf > /etc/nginx/sites-available/foxchess.foxugly.com.new; cp -a /etc/nginx/sites-available/foxchess.foxugly.com /etc/nginx/sites-available/foxchess.foxugly.com.deploybak; mv /etc/nginx/sites-available/foxchess.foxugly.com.new /etc/nginx/sites-available/foxchess.foxugly.com; nginx -t || { mv /etc/nginx/sites-available/foxchess.foxugly.com.deploybak /etc/nginx/sites-available/foxchess.foxugly.com; exit 1; }; systemctl reload nginx'",
+              "sudo -u django bash $A/deploy/ssm-deploy.sh",
+              "chown -R -h django:www-data $A && sudo -u django chmod -R g-w,o-rwx $A"
+            ],
+            "executionTimeout": ["900"]
+          }
+          EOF
+          CMD_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --comment "Deploy foxchess $SHA" \
+            --cloud-watch-output-config CloudWatchOutputEnabled=true \
+            --parameters file:///tmp/ssm-params.json \
+            --query Command.CommandId --output text)
+          echo "cmd_id=$CMD_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Attente de la fin du déploiement
+        env:
+          INSTANCE_ID: ${{ secrets.EC2_INSTANCE_ID }}
+          CMD_ID: ${{ steps.ssm.outputs.cmd_id }}
+        run: |
+          for _ in $(seq 1 180); do
+            STATUS=$(aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" \
+              --query Status --output text 2>/dev/null || echo Pending)
+            case "$STATUS" in
+              Success)
+                aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" --query StandardOutputContent --output text
+                exit 0 ;;
+              Failed|Cancelled|TimedOut)
+                echo "Déploiement : $STATUS"
+                aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" --query StandardOutputContent --output text
+                aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" --query StandardErrorContent --output text
+                exit 1 ;;
+              *) sleep 5 ;;
+            esac
+          done
+          echo "Délai dépassé (15 min)"; exit 1
+
+      - name: Vérification de /health/
+        run: |
+          for tentative in $(seq 1 10); do
+            code=$(curl -sS -o /tmp/sante.json -w '%{http_code}' --max-time 10 https://foxchess.foxugly.com/health/ || echo 000)
+            echo "Tentative $tentative : HTTP $code"
+            [ "$code" = "200" ] && { cat /tmp/sante.json; exit 0; }
+            sleep 6
+          done
+          echo "::error::/health/ ne répond pas 200 après le déploiement"; exit 1

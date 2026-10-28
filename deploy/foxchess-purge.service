@@ -1,0 +1,19 @@
+[Unit]
+Description=foxChess — purge RGPD des parties inactives et des sessions expirées
+After=foxchess-env-fetch.service postgresql.service
+Requires=foxchess-env-fetch.service
+
+[Service]
+Type=oneshot
+User=django
+Group=www-data
+UMask=0027
+WorkingDirectory=/var/www/django_websites/foxChess
+EnvironmentFile=/run/foxchess/.env
+ExecStart=/var/www/django_websites/foxChess/.venv/bin/python manage.py purger_parties
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes

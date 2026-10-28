@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Partie — foxChess{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'vendor/chessboardjs-1.0.0/chessboard-1.0.0.min.css' %}">
+{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="page-header__left">
+        <a class="btn btn-outline-secondary" href="{% url 'accueil' %}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Retour</a>
+    </div>
+    <h1 class="page-header__title"><i class="bi bi-grid-3x3" aria-hidden="true"></i>Contre Stockfish · niveau {{ partie.niveau }}</h1>
+    <div class="page-header__right">
+        {% if partie.en_cours %}
+            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#abandon">
+                <i class="bi bi-flag me-1" aria-hidden="true"></i>Abandonner
+            </button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4 justify-content-center">
+    <div class="col-12 col-lg-7 col-xl-6">
+        <div id="echiquier" class="echiquier"
+             data-couleur="{{ partie.couleur }}"
+             data-url-jouer="{% url 'jouer' partie.pk %}"
+             data-url-moteur="{% url 'relancer_moteur' partie.pk %}"
+             data-pieces="{% static 'vendor/chessboardjs-1.0.0/img/chesspieces/wikipedia/' %}"
+             data-csrf="{{ csrf_token }}"></div>
+    </div>
+    <div class="col-12 col-lg-5 col-xl-4">
+        <div class="card mb-3">
+            <div class="card-body">
+                <p class="mb-1 fw-semibold" id="statut" role="status" aria-live="polite"></p>
+                <p class="mb-0 small text-body-secondary">Vous avez les {{ partie.get_couleur_display|lower }}. Promotion automatique en dame.</p>
+                <button type="button" class="btn btn-sm btn-outline-primary mt-2 d-none" id="relancer">
+                    <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i>Relancer le moteur
+                </button>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">Coups</div>
+            <ol class="list-group list-group-flush list-group-numbered coups" id="coups"></ol>
+        </div>
+    </div>
+</div>
+{% if partie.en_cours %}
+<div class="modal fade" id="abandon" tabindex="-1" aria-labelledby="abandon-titre" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" action="{% url 'abandonner' partie.pk %}">
+            {% csrf_token %}
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="abandon-titre">Abandonner la partie ?</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body">Stockfish sera déclaré vainqueur. La partie restera consultable.</div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="bi bi-x-lg me-1" aria-hidden="true"></i>Annuler</button>
+                <button type="submit" class="btn btn-danger"><i class="bi bi-flag me-1" aria-hidden="true"></i>Abandonner</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{{ etat|json_script:"etat-initial" }}
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'vendor/jquery-3.7.1/jquery.min.js' %}"
+        integrity="sha384-1H217gwSVyLSIfaLxHbE7dRb3v4mYCKbpQvzx0cegeju1MVsGrX5xXxAvs/HgeFs"
+        crossorigin="anonymous"></script>
+<script src="{% static 'vendor/chessboardjs-1.0.0/chessboard-1.0.0.min.js' %}"
+        integrity="sha384-8Vi8VHwn3vjQ9eUHUxex3JSN/NFqUg3QbPyX8kWyb93+8AC/pPWTzj+nHtbC5bxD"
+        crossorigin="anonymous"></script>
+<script src="{% static 'js/partie.js' %}"></script>
+{% endblock %}

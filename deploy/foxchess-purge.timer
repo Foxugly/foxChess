@@ -1,0 +1,10 @@
+[Unit]
+Description=foxChess — purge quotidienne (RGPD)
+
+[Timer]
+OnCalendar=*-*-* 04:20:00
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,34 @@
+# Base locale (SQLite de développement).
+db.sqlite3
+db.sqlite3-journal
+
+# Environnement virtuel — reconstruit localement.
+.venv/
+
+# Binaires locaux (Stockfish pour Windows, captures) : jamais versionnés.
+tools/
+
+# Secrets : configuration par l'environnement (SSM en production).
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Fichiers statiques collectés (`collectstatic`) : produits au déploiement.
+staticfiles/
+
+# IDE et système
+.idea/
+.vscode/
+Thumbs.db
+desktop.ini
+.DS_Store
+.playwright-mcp/
+
+# Certificats
+*.pem
+*.key

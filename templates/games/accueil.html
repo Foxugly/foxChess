@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Jouer — foxChess{% endblock %}
+{% block content %}
+<div class="page-header">
+    <div class="page-header__left"></div>
+    <h1 class="page-header__title"><i class="bi bi-grid-3x3" aria-hidden="true"></i>Nouvelle partie</h1>
+    <div class="page-header__right"></div>
+</div>
+
+<div class="row g-4 justify-content-center">
+    <div class="col-12 col-md-6 col-lg-5">
+        <div class="card">
+            <div class="card-body">
+                <form method="post" action="{% url 'nouvelle_partie' %}">
+                    {% csrf_token %}
+                    {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+                    <fieldset class="mb-3">
+                        <legend class="form-label fs-6">Vous jouez</legend>
+                        {% for choix in form.couleur %}
+                            <div class="form-check form-check-inline">
+                                {{ choix.tag }}
+                                <label class="form-check-label" for="{{ choix.id_for_label }}">{{ choix.choice_label }}</label>
+                            </div>
+                        {% endfor %}
+                        {% if form.couleur.errors %}<div class="text-danger small">{{ form.couleur.errors|join:" " }}</div>{% endif %}
+                    </fieldset>
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ form.niveau.id_for_label }}">Niveau de Stockfish (1 à 8)</label>
+                        <select class="form-select" name="{{ form.niveau.html_name }}" id="{{ form.niveau.id_for_label }}">
+                            {% for valeur, libelle in form.fields.niveau.choices %}
+                                <option value="{{ valeur }}"{% if valeur|stringformat:"s" == form.niveau.value|stringformat:"s" %} selected{% endif %}>{{ libelle }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if form.niveau.errors %}<div class="text-danger small">{{ form.niveau.errors|join:" " }}</div>{% endif %}
+                    </div>
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-success"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Commencer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% if parties %}
+    <div class="col-12 col-md-6 col-lg-5">
+        <h2 class="h5">Vos parties</h2>
+        <div class="list-group">
+            {% for p in parties %}
+                <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                   href="{% url 'partie' p.pk %}">
+                    <span>
+                        <i class="bi bi-circle{% if p.couleur == 'b' %}-fill{% endif %} me-1" aria-hidden="true"></i>
+                        {{ p.get_couleur_display }} · niveau {{ p.niveau }}
+                        <small class="text-body-secondary d-block">{{ p.modifiee_le|date:"d/m/Y H:i" }}</small>
+                    </span>
+                    {% if p.en_cours %}
+                        <span class="badge text-bg-success">En cours</span>
+                    {% else %}
+                        <span class="badge text-bg-secondary">{{ p.resultat }}</span>
+                    {% endif %}
+                </a>
+            {% endfor %}
+        </div>
+        <p class="small text-body-secondary mt-2">Vos parties sont liées à ce navigateur, sans compte, et effacées après un mois sans activité.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
