@@ -11,7 +11,7 @@
 set -euo pipefail
 
 REPO=foxChess
-REPO_ID=__A_REMPLIR__        # gh api repos/Foxugly/foxChess --jq .id (une fois le dépôt créé)
+REPO_ID=1436976324          # gh api repos/Foxugly/foxChess --jq .id
 OWNER_ID=3275928            # Foxugly
 INSTANCE_ID=i-0fe664678563bae5f
 REGION=eu-west-1
