@@ -15,6 +15,10 @@ updates:
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
+      # ruff reste à la version de la flotte (OPERATIONS.md §3.22) : une montée
+      # se décide pour toute la flotte à la fois, pas dépôt par dépôt.
+      - dependency-name: "ruff"
+        versions: [">=0.17"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
