@@ -43,6 +43,9 @@
                href="{{ url_accueil }}"{% if request.path == url_accueil %} aria-current="page"{% endif %}>
                 <i class="bi bi-grid-3x3" aria-hidden="true"></i>Jouer
             </a>
+            <button type="button" class="topbar__link" data-bs-toggle="modal" data-bs-target="#niveaux">
+                <i class="bi bi-bar-chart-steps" aria-hidden="true"></i>Level
+            </button>
         </nav>
 
         <div class="topbar__actions">
@@ -67,6 +70,33 @@
     {% endif %}
     {% block content %}{% endblock %}
 </main>
+<div class="modal fade" id="niveaux" tabindex="-1" aria-labelledby="niveaux-titre" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title fs-5" id="niveaux-titre">Lichess Stockfish Level to Elo Breakdown</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body p-0">
+                <table class="table table-sm mb-0 align-middle">
+                    <thead>
+                        <tr><th scope="col" class="ps-3">Level</th><th scope="col">Elo</th><th scope="col" class="pe-3">Stockfish</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td class="ps-3">1</td><td>Under 400</td><td class="pe-3">Skill Level -9, depth 5</td></tr>
+                        <tr><td class="ps-3">2</td><td>~500</td><td class="pe-3">Skill Level -5, depth 5</td></tr>
+                        <tr><td class="ps-3">3</td><td>~800</td><td class="pe-3">Skill Level -1, depth 5</td></tr>
+                        <tr><td class="ps-3">4</td><td>~1100</td><td class="pe-3">Skill Level 3, depth 5</td></tr>
+                        <tr><td class="ps-3">5</td><td>~1500</td><td class="pe-3">Skill Level 7, depth 5</td></tr>
+                        <tr><td class="ps-3">6</td><td>~1900</td><td class="pe-3">Skill Level 11, depth 8</td></tr>
+                        <tr><td class="ps-3">7</td><td>~2300</td><td class="pe-3">Skill Level 15, depth 13</td></tr>
+                        <tr><td class="ps-3">8</td><td>2800+</td><td class="pe-3">Full strength, single pv, depth 22</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 <footer class="app-footer">
     <div class="app-footer__inner">
         <span class="app-footer__brand">foxChess</span>

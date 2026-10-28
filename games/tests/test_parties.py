@@ -48,6 +48,12 @@ class CreationTests(JoueurMixin, TestCase):
     def test_accueil(self):
         self.assertEqual(self.client.get(reverse("accueil")).status_code, 200)
 
+    def test_bouton_level_et_tableau_des_niveaux(self):
+        reponse = self.client.get(reverse("accueil"))
+        self.assertContains(reponse, 'data-bs-target="#niveaux"')
+        self.assertContains(reponse, "Lichess Stockfish Level to Elo Breakdown")
+        self.assertContains(reponse, "Full strength, single pv, depth 22")
+
     def test_le_formulaire_affiche_se_soumet_tel_quel(self):
         """Ce que la page rend (choix cochés par défaut) suffit à créer une partie."""
         import re
