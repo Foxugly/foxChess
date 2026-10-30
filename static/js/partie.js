@@ -17,6 +17,7 @@
     const statut = document.getElementById("statut");
     const listeCoups = document.getElementById("coups");
     const relancer = document.getElementById("relancer");
+    const copier = document.getElementById("copier");
     const couleur = conteneur.dataset.couleur;
     let etat = JSON.parse(document.getElementById("etat-initial").textContent);
     let enAttente = false;
@@ -44,6 +45,25 @@
             listeCoups.appendChild(li);
         }
         listeCoups.scrollTop = listeCoups.scrollHeight;
+        copier.disabled = etat.coups.length === 0;
+    }
+
+    // « 1. e4 e5 2. Cf3 … » : la notation des listes de coups (PGN).
+    function coupsEnTexte() {
+        const numerotes = [];
+        for (let i = 0; i < etat.coups.length; i += 2) {
+            numerotes.push((i / 2 + 1) + ". " + etat.coups.slice(i, i + 2).join(" "));
+        }
+        return numerotes.join(" ");
+    }
+
+    function signalerCopie(icone, titre) {
+        copier.querySelector("i").className = "bi " + icone;
+        copier.title = titre;
+        setTimeout(function () {
+            copier.querySelector("i").className = "bi bi-clipboard";
+            copier.title = "Copier les coups";
+        }, 1500);
     }
 
     function surlignerDernier() {
@@ -175,6 +195,13 @@
     conteneur.addEventListener("touchend", function (e) { e.preventDefault(); }, {passive: false});
 
     relancer.addEventListener("click", function () { envoyer(conteneur.dataset.urlMoteur); });
+    copier.addEventListener("click", function () {
+        // Hors HTTPS, `navigator.clipboard` n'existe pas : l'échec passe par le second rappel.
+        Promise.resolve().then(function () { return navigator.clipboard.writeText(coupsEnTexte()); }).then(
+            function () { signalerCopie("bi-clipboard-check", "Coups copiés"); },
+            function () { signalerCopie("bi-clipboard-x", "Copie impossible"); }
+        );
+    });
     window.addEventListener("resize", function () { board.resize(); surlignerDernier(); marquerChoix(); });
 
     afficherCoups();
