@@ -39,7 +39,13 @@
             </div>
         </div>
         <div class="card">
-            <div class="card-header">Coups</div>
+            <div class="card-header d-flex align-items-center justify-content-between">
+                Coups
+                <button type="button" class="btn btn-sm btn-outline-secondary py-0" id="copier" disabled
+                        title="Copier les coups" aria-label="Copier les coups dans le presse-papiers">
+                    <i class="bi bi-clipboard" aria-hidden="true"></i>
+                </button>
+            </div>
             <ol class="list-group list-group-flush list-group-numbered coups" id="coups"></ol>
         </div>
     </div>
