@@ -13,7 +13,6 @@ on:
       - main
 
 permissions:
-  id-token: write
   contents: read
 
 concurrency:
@@ -22,9 +21,19 @@ concurrency:
 
 jobs:
   deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Le filtre `branches:` de workflow_run porte sur le nom de branche du run CI,
+    # pas sur le dépôt : on n'accepte qu'une CI verte déclenchée par un push sur
+    # main de CE dépôt.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
     environment: production
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Identifiants AWS (OIDC)
         uses: aws-actions/configure-aws-credentials@v6
@@ -46,7 +55,8 @@ jobs:
           #   0. set -eu : la première commande en échec arrête tout → Failed ;
           #   1. chown de l'arborescence (répare des objets git laissés root) ;
           #   2. en django, umask 027 : fetch + reset --hard sur origin/main ;
-          #   3. en root : unités systemd, script de configuration et nginx
+          #   3. en root : refus si le SHA n'est pas un ancêtre de refs/heads/main
+          #      (historique complet de main dans le miroir), puis unités systemd, script de configuration et nginx
           #      installés depuis le BLOB GIT VALIDÉ (miroir de root, au SHA), jamais depuis l'arbre
           #      modifiable par django (§3.10) ; nginx -t, sinon retour arrière ;
           #      la minuterie de purge activée (idempotent) ; le SHA déployé écrit dans
@@ -71,8 +81,11 @@ jobs:
               "sudo -u django bash -c 'umask 027; cd $A && git fetch --quiet && git reset --hard --quiet origin/main'",
               "install -d -m 700 -o root -g root /var/lib/fleet-deploy",
               "[ -d $M ] || git init --quiet --bare $M",
-              "git --git-dir=$M fetch --quiet --depth=1 https://github.com/Foxugly/foxChess.git $SHA",
+              "git --git-dir=$M rev-parse --is-shallow-repository | grep -qx false || git --git-dir=$M fetch --quiet --unshallow https://github.com/Foxugly/foxChess.git refs/heads/main",
+              "git --git-dir=$M fetch --quiet https://github.com/Foxugly/foxChess.git $SHA",
               "git --git-dir=$M cat-file -e $SHA^{commit}",
+              "git --git-dir=$M fetch --quiet https://github.com/Foxugly/foxChess.git refs/heads/main",
+              "git --git-dir=$M merge-base --is-ancestor $SHA FETCH_HEAD || { echo \"REFUS : $SHA n est pas sur main\" >&2; exit 1; }",
               "$G:deploy/foxchess-env-fetch.service > /etc/systemd/system/foxchess-env-fetch.service",
               "$G:deploy/foxchess-gunicorn.service > /etc/systemd/system/foxchess-gunicorn.service",
               "$G:deploy/foxchess-purge.service > /etc/systemd/system/foxchess-purge.service",
