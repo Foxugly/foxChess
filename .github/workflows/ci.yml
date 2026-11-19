@@ -116,9 +116,12 @@ jobs:
         run: python manage.py check --deploy --fail-level ERROR
 
       - name: Suite de tests (PostgreSQL 16 + Stockfish)
+        # Toutes les apps (games, admin_2fa…), pas seulement games.
         # Les tests du vrai moteur se sautent sans binaire : ici, l'absence est une erreur.
+        # pipefail : sans lui, `| tee` masquait l'échec des tests (statut de tee).
         run: |
-          python manage.py test games -v 2 2>&1 | tee /tmp/tests.log
+          set -o pipefail
+          python manage.py test -v 2 2>&1 | tee /tmp/tests.log
           if grep -q "skipped 'Stockfish absent" /tmp/tests.log; then
             echo "::error::Les tests du vrai Stockfish ont été sautés."; exit 1
           fi
