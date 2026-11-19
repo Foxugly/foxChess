@@ -48,12 +48,18 @@ if not DEBUG and (not ALLOWED_HOSTS or "*" in ALLOWED_HOSTS):
 
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
+    # admin.site avec 2FA TOTP obligatoire (admin_2fa/, CLAUDE.md « Admin 2FA ») :
+    # remplace "django.contrib.admin", même label d'app.
+    "admin_2fa.apps.OTPAdminConfig",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_otp",
+    "django_otp.plugins.otp_totp",
+    "django_otp.plugins.otp_static",
+    "admin_2fa",
     "accounts",
     "games",
 ]
@@ -65,6 +71,9 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Rattache à request.user l'appareil OTP vérifié de la session (2FA admin).
+    # Juste après AuthenticationMiddleware ; sans effet sur le site public.
+    "django_otp.middleware.OTPMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -145,6 +154,13 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 VERSION = os.environ.get("FOXCHESS_VERSION", "").strip() or "0.1.0"
 
 LOGIN_URL = "/admin/login/"
+
+# --- 2FA admin (django-otp). Libellé affiché dans l'appli d'authentification.
+# Throttling actif (facteur 1 = 1 s, 2 s, 4 s… après chaque mauvais code, par
+# appareil) ; 0 le couperait (check admin_2fa.E004).
+OTP_TOTP_ISSUER = "foxChess admin (foxchess.foxugly.com)"
+OTP_TOTP_THROTTLE_FACTOR = 1
+OTP_STATIC_THROTTLE_FACTOR = 1
 
 
 # --- Stockfish -------------------------------------------------------------

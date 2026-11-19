@@ -21,7 +21,7 @@ every local command (settings fail closed without it: no dev `SECRET_KEY`, no SQ
 $env:DJANGO_DEBUG="True"
 $env:STOCKFISH_PATH="$PWD\tools\stockfish\stockfish\stockfish-windows-x86-64-universal.exe"
 .\.venv\Scripts\python.exe manage.py runserver
-.\.venv\Scripts\python.exe manage.py test games
+.\.venv\Scripts\python.exe manage.py test           # all apps, as CI
 .\.venv\Scripts\python.exe manage.py makemigrations --check --dry-run
 .\.venv\Scripts\python.exe -m ruff check .
 ```
@@ -56,6 +56,37 @@ CI installs Ubuntu's `stockfish` package and **fails** if they are skipped there
   (chessboard.js sizes squares with `style` attributes).
 - **Load bounds:** gunicorn 2 workers, unit `CPUQuota=150%`/`MemoryMax=768M`, Stockfish 1 thread
   / 16 MB hash, nginx `limit_req` 2 r/s per IP on the endpoints that start the engine.
+
+## Admin 2FA
+
+`/admin/` requires a TOTP second factor for **every** staff account (django-otp 1.7.5 + qrcode 8.2,
+app `admin_2fa/`, ported from the fleet reference Poker_server). Players see nothing of it.
+
+- **Wiring**: `"admin_2fa.apps.OTPAdminConfig"` *replaces* `"django.contrib.admin"` (it makes
+  `admin.site` an `Admin2FASite`, whose `has_permission` also needs `user.is_verified()`); plus
+  `django_otp`, `otp_totp`, `otp_static`, `admin_2fa` in INSTALLED_APPS and
+  `django_otp.middleware.OTPMiddleware` right after `AuthenticationMiddleware`. `OTP_TOTP_ISSUER` is
+  the label in the authenticator app. A missing piece fails `manage.py check` (`admin_2fa.E001-E004`).
+  A custom `AdminSite` subclass must inherit `Admin2FASite`.
+- **Flow**: password on `/admin/login/` → `/admin/2fa/setup/` (first time: QR code + key, confirm one
+  code, 10 single-use backup codes shown **once**) or `/admin/2fa/verify/` (TOTP code or a backup
+  code). Server-rendered templates, CSRF, `never_cache`, no inline script/style (CSP-safe).
+- **Brute force**: django-otp throttles each device (1 s, 2 s, 4 s… after each wrong code) and nginx
+  puts `/admin/2fa/` in the same `foxchess_admin_login` zone as the login (10 r/min per IP).
+- **Lost phone / locked out** (on the box, as the app's own unit would run it):
+
+  ```bash
+  sudo systemd-run --wait --pipe --quiet --uid=django --gid=www-data \
+    -p EnvironmentFile=/run/foxchess/.env -p WorkingDirectory=/var/www/django_websites/foxChess \
+    /var/www/django_websites/foxChess/.venv/bin/python manage.py admin_2fa_reset <email>
+  ```
+
+  deletes the user's devices (re-enrolment at the next admin login); `--unlock` only clears the delay.
+- **Tests on admin pages**: use `admin_2fa.testing.force_admin_login(client, user)`, not
+  `client.force_login` (the admin would redirect to the second factor). The admin_2fa tests are
+  Django `TestCase`s (the reference ones are pytest); CI runs `manage.py test` on **all** apps.
+- **Secrets**: never log or send to Sentry the TOTP key, the QR code or a backup code — the views keep
+  them in `Redacted` wrappers and the form field is named `token` (scrubbed by Sentry).
 
 ## Deploy
 
