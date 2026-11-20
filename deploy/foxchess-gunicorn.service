@@ -17,7 +17,7 @@ Environment="PYTHONUNBUFFERED=1"
 # pour au plus une seconde de réflexion au niveau 8 : 2 workers bornent à deux
 # moteurs simultanés sur la machine partagée. --timeout 30 : large au-dessus du
 # DELAI_MAX de games/moteur.py. Pas de log d'accès : nginx journalise déjà.
-ExecStart=/var/www/django_websites/foxChess/.venv/bin/gunicorn --workers 2 --timeout 30 \
+ExecStart=/var/www/django_websites/foxChess/.venv/bin/gunicorn --no-control-socket --workers 2 --timeout 30 \
     --bind 127.0.0.1:8012 \
     --error-logfile /var/log/foxchess/gunicorn-error.log \
     config.wsgi:application
