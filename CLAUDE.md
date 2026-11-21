@@ -31,6 +31,15 @@ $env:STOCKFISH_PATH="$PWD\tools\stockfish\stockfish\stockfish-windows-x86-64-uni
 Without `STOCKFISH_PATH`, the three real-engine tests (`MoteurReelTests`) are **skipped**;
 CI installs Ubuntu's `stockfish` package and **fails** if they are skipped there.
 
+Dependencies: direct ones (ranges) live in **`requirements.in`**; **`requirements.txt` is a hash-pinned lock**
+generated from it by uv for Linux / Python 3.12 (production) — the deploy installs exactly that
+(`--require-hashes --no-deps`, then `pip check`). After editing `requirements.in`, regenerate the lock with the
+command in its header (`uv pip compile requirements.in --generate-hashes --python-version 3.12
+--python-platform x86_64-unknown-linux-gnu -o requirements.txt`). On Linux (CI) install in two steps —
+`pip install --require-hashes -r requirements.txt` then `pip install -r requirements-dev.txt` (one hashed line
+puts pip in hash-checking mode for the whole install). **On Windows the lock does not install** (no `tzdata`, a
+Windows-only Django dependency): `.\.venv\Scripts\python.exe -m pip install -r requirements.in -r requirements-dev.txt`.
+
 ## Architecture
 
 - **`games/models.py` — `Partie`.** The truth is `coups` (space-separated UCI); `echiquier()`
