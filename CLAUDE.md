@@ -32,9 +32,9 @@ Without `STOCKFISH_PATH`, the three real-engine tests (`MoteurReelTests`) are **
 CI installs Ubuntu's `stockfish` package and **fails** if they are skipped there.
 
 Dependencies: direct ones (ranges) live in **`requirements.in`**; **`requirements.txt` is a hash-pinned lock**
-generated from it by uv for Linux / Python 3.12 (production) — the deploy installs exactly that
+generated from it by uv for Linux / Python 3.14 (production, deadsnakes `/usr/bin/python3.14`) — the deploy installs exactly that
 (`--require-hashes --no-deps`, then `pip check`). After editing `requirements.in`, regenerate the lock with the
-command in its header (`uv pip compile requirements.in --generate-hashes --python-version 3.12
+command in its header (`uv pip compile requirements.in --generate-hashes --python-version 3.14
 --python-platform x86_64-unknown-linux-gnu -o requirements.txt`). On Linux (CI) install in two steps —
 `pip install --require-hashes -r requirements.txt` then `pip install -r requirements-dev.txt` (one hashed line
 puts pip in hash-checking mode for the whole install). **On Windows the lock does not install** (no `tzdata`, a
@@ -107,3 +107,8 @@ Fleet model (`OPERATIONS.md §3.11`): push to `main` → CI green → `deploy.ym
 `foxchess-deploy` → SSM). Root installs units, the env-fetch script and the vhost **from its
 own bare mirror** `/var/lib/fleet-deploy/foxChess.git` at the pushed SHA; `deploy/ssm-deploy.sh`
 runs as django. sudoers, Stockfish, DB and first clone are root, out-of-band (`deploy/README.md`).
+
+The venv runs on **`/usr/bin/python3.14`** (deadsnakes; the system `python3` stays 3.12).
+`ssm-deploy.sh` checks the venv's version before `pip install`: on a mismatch it rebuilds `.venv`
+**in place** (console-script shebangs hard-code the path), keeps the old one as `.venv.prev` and
+puts it back if the rebuild fails.
