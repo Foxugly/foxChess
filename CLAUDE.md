@@ -63,6 +63,10 @@ Windows-only Django dependency): `.\.venv\Scripts\python.exe -m pip install -r r
   are vendored in `static/vendor/` with SRI hashes on the tags — if you replace a file, recompute
   the hash (`openssl dgst -sha384 -binary f | openssl base64 -A`). Inline styles stay allowed
   (chessboard.js sizes squares with `style` attributes).
+- **Static files**: `config.stockage.StatiquesHaches` (ManifestStaticFilesStorage with `patterns = ()`)
+  hashes file names for cache-busting but never rewrites contents (SRI hashes stay valid). `manage.py test`
+  falls back to plain `StaticFilesStorage` (no manifest without collectstatic). A `{% static %}` on a
+  directory fails in prod — use `{% get_static_prefix %}` (as for the chessboard.js pieces).
 - **Load bounds:** gunicorn 2 workers, unit `CPUQuota=150%`/`MemoryMax=768M`, Stockfish 1 thread
   / 16 MB hash, nginx `limit_req` 2 r/s per IP on the endpoints that start the engine.
 
