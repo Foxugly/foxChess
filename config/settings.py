@@ -149,6 +149,12 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+# Noms hachés hors DEBUG (cache-busting, config/stockage.py). Les tests tournent
+# sans collectstatic, donc sans manifeste : stockage simple (voir plus bas).
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "config.stockage.StatiquesHaches"},
+}
 
 # Version affichée dans le footer et par /health/ (standard de la flotte).
 VERSION = os.environ.get("FOXCHESS_VERSION", "").strip() or "0.1.0"
@@ -182,6 +188,7 @@ RETENTION_PARTIES_JOURS = int(os.environ.get("RETENTION_PARTIES_JOURS", "30"))
 # Tests : hachage de mot de passe rapide, limité à `manage.py test`.
 if sys.argv[1:2] == ["test"]:
     PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
+    STORAGES["staticfiles"] = {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"}
 
 
 # --- Production ------------------------------------------------------------
