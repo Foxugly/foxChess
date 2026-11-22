@@ -2,7 +2,7 @@
 #
 # Mêmes règles que Chronos : celles que ruff appliquait par défaut avant 0.16
 # (erreurs de syntaxe, imports et noms inutilisés, comparaisons douteuses).
-target-version = "py312"
+target-version = "py314"
 extend-exclude = ["docs"]
 
 [lint]

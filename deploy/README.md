@@ -77,7 +77,7 @@ install -d -o django -g www-data -m 750 /var/log/foxchess
 
 # Premier clone et environnement, en django (§3.11 : amorçage)
 sudo -u django bash -c 'umask 027; cd /var/www/django_websites && git clone https://github.com/Foxugly/foxChess.git'
-sudo -u django bash -c 'cd /var/www/django_websites/foxChess && python3.12 -m venv .venv && .venv/bin/pip install --require-hashes --no-deps -r requirements.txt && .venv/bin/pip check'
+sudo -u django bash -c 'cd /var/www/django_websites/foxChess && /usr/bin/python3.14 -m venv .venv && .venv/bin/pip install --require-hashes --no-deps -r requirements.txt && .venv/bin/pip check'
 
 # Depuis le blob git validé, jamais par cp depuis l'arborescence de django (§3.10).
 cd /var/www/django_websites/foxChess
