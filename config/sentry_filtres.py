@@ -10,6 +10,7 @@ string, et pas d'erreur `DisallowedHost` (les robots qui appellent l'IP).
 from urllib.parse import urlsplit, urlunsplit
 
 from django.core.exceptions import DisallowedHost
+from sentry_sdk.scrubber import EventScrubber
 
 #: Les seuls en-têtes de requête transmis.
 ENTETES_PERMIS = frozenset({
@@ -31,7 +32,34 @@ def masquer_url(url):
     return urlunsplit((morceaux.scheme, morceaux.netloc, morceaux.path, "", ""))
 
 
+# Termes proxy/IP que le SDK lui-même ajoute quand il traduit
+# `send_default_pii=False` ; s'ajoutent à sa liste noire de clés sensibles.
+_TERMES_PII = ["forwarded", "-ip", "remote-", "via", "-user"]
+
+#: Ce que le SDK collecte de lui-même (sentry-sdk 2.76 : remplace
+#: `send_default_pii=False`, devenu obsolète). Ni utilisateur, ni cookies, ni
+#: corps de requête, ni variables locales, ni paramètres SQL : jamais plus qu'avant.
+DONNEES_COLLECTEES = {
+    "user_info": False,
+    "cookies": {"mode": "off"},
+    "http_headers": {"request": {"mode": "denylist", "terms": _TERMES_PII}},
+    "http_bodies": [],
+    "url_query_params": {"mode": "denylist", "terms": _TERMES_PII},
+    "graphql": {"document": False, "variables": False},
+    "gen_ai": {"inputs": False, "outputs": False},
+    "database_query_data": False,
+    "queues": False,
+    "stack_frame_variables": False,
+    "frame_context_lines": 5,
+}
+
+# Passer `data_collection` coupe l'EventScrubber du SDK : on le rejoue en tête
+# de nos propres filtres (extra, fils d'Ariane, spans).
+_SCRUBBER = EventScrubber(send_default_pii=False)
+
+
 def _nettoyer(evenement):
+    _SCRUBBER.scrub_event(evenement)
     requete = evenement.get("request")
     if isinstance(requete, dict):
         entetes = requete.get("headers") or {}
@@ -67,9 +95,9 @@ def avant_transaction(evenement, indice):
 def reglages_sentry():
     """Options de `sentry_sdk.init`, partagées par les réglages et les tests."""
     return {
-        "send_default_pii": False,
+        # Ni PII, ni cookies, ni corps, ni variables locales : `DONNEES_COLLECTEES`.
+        "data_collection": DONNEES_COLLECTEES,
         "max_request_body_size": "never",
-        "include_local_variables": False,
         "before_send": avant_envoi,
         "before_send_transaction": avant_transaction,
     }
