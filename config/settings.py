@@ -220,7 +220,6 @@ LOGGING = {
 SENTRY_DSN = os.environ.get("SENTRY_DSN", "").strip()
 if SENTRY_DSN:
     import sentry_sdk
-    from sentry_sdk.integrations.django import DjangoIntegration
 
     from config.sentry_filtres import reglages_sentry
 
@@ -228,7 +227,6 @@ if SENTRY_DSN:
         dsn=SENTRY_DSN,
         environment=os.environ.get("SENTRY_ENVIRONMENT", "production"),
         release=os.environ.get("SENTRY_RELEASE", "") or None,
-        integrations=[DjangoIntegration()],
         traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0")),
         **reglages_sentry(),
     )
