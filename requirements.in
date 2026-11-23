@@ -2,6 +2,7 @@ Django>=6.1.3,<6.2
 chess>=1.11.2,<1.12
 psycopg[binary]>=3.3.9,<3.4
 gunicorn==27.0.1
-sentry-sdk[django]==2.76.0
+# hold: sentry-sdk 3.0 is a day-0 major (2026-11-23); migrate after it stabilises — revisit 2026-12-07
+sentry-sdk[django]>=2.76,<3
 django-otp==1.7.5
 qrcode==8.2
