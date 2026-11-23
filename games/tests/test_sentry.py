@@ -42,7 +42,9 @@ class ReglagesTests(SimpleTestCase):
         self.assertIs(client.options["attach_stacktrace"], False)
 
     def test_integrations(self):
-        django, journaux = reglages_sentry()["integrations"]
+        reglages = reglages_sentry()
+        self.assertEqual(reglages["data_collection"]["http_headers"]["response"], {"mode": "off"})
+        django, journaux = reglages["integrations"]
         self.assertIsInstance(django, DjangoIntegration)
         self.assertIs(django.cache_spans, False)
         self.assertIsInstance(journaux, LoggingIntegration)
