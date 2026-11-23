@@ -1,4 +1,4 @@
-# ruff — même version que la flotte (ruff==0.16.10, requirements-dev.txt).
+# ruff — même version que la flotte (ruff==0.17.6, requirements-dev.txt).
 #
 # Mêmes règles que Chronos : celles que ruff appliquait par défaut avant 0.16
 # (erreurs de syntaxe, imports et noms inutilisés, comparaisons douteuses).
